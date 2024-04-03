@@ -30,6 +30,7 @@ coverage
 # Python
 __pycache__
 venv
+.venv
 
 # Environment Variables
 .env
