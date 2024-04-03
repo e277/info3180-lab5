@@ -5,8 +5,11 @@ Werkzeug Documentation:  https://werkzeug.palletsprojects.com/
 This file creates your application.
 """
 
-from app import app
-from flask import render_template, request, jsonify, send_file
+from app import app, db
+from app.forms import Movieform
+from app.models import Movie
+from flask import render_template, request, jsonify, send_file, send_from_directory
+from werkzeug.utils import secure_filename
 import os
 
 
@@ -17,6 +20,52 @@ import os
 @app.route('/')
 def index():
     return jsonify(message="This is the beginning of our API")
+
+@app.route('/api/v1/movies', methods=['GET', 'POST']    )
+def movies():
+    if request.method == 'GET':
+        movies = Movie.query.all()
+        posters = get_uploaded_posters()
+        for movie in movies:
+            if movie.poster in posters:
+                movie.poster = request.host_url + 'uploads/' + movie.poster
+        return jsonify(movies=[movie.serialize() for movie in movies])
+    
+    elif request.method == 'POST':
+        form = Movieform()
+        if form.validate_on_submit():
+            title = form.title.data
+            description = form.description.data
+            poster = form.poster.data
+            filename = secure_filename(poster.filename)
+            poster.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            
+            movie = Movie(title=title, description=description, poster=filename)
+            db.session.add(movie)
+            db.session.commit()
+            
+            return jsonify(message="Movie added successfully", movie=movie.serialize())
+        else:
+            return jsonify(errors=form_errors(form))
+    return jsonify(errors=['Invalid request'])
+
+@app.route('/uploads/<poster>')
+def uploaded_poster(poster):
+    return send_from_directory(os.path.join(os.getcwd(), app.config['UPLOAD_FOLDER']), poster)
+
+def get_uploaded_posters():
+    rootdir = os.getcwd()
+    # print(rootdir)
+    image_list = []
+    for subdir, dirs, files in os.walk(os.path.join(rootdir, app.config['UPLOAD_FOLDER'])):
+        for file in files:
+            # print(os.path.join(subdir, file))
+            if file.endswith(('.jpg', '.png', '.jpeg')):
+                full_path = os.path.join(subdir, file)
+                relative_path = os.path.relpath(full_path, os.path.join(rootdir, app.config['UPLOAD_FOLDER']))
+                image_list.append(relative_path)
+    return image_list
+
 
 
 ###
