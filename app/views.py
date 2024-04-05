@@ -24,44 +24,45 @@ def index():
 
 
 
-@app.route('/api/v1/movies', methods=['POST'])
-def movies():    
-    form = Movieform()
-    if form.validate_on_submit():
-        title = form.title.data
-        description = form.description.data
-        poster = form.poster.data
-        
-        filename = secure_filename(poster.filename)
-        poster.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        
-        movie = Movie(title=title, description=description, poster=filename)
-        db.session.add(movie)
-        db.session.commit()
-        
-        return jsonify(message="Movie added successfully", movie={
-            'title': title,
-            'description': description,
-            'poster': filename,
-        }), 201
-    else:
-        return jsonify(errors=form_errors(form)), 400
+@app.route('/api/v1/movies', methods=['GET', 'POST'])
+def movies():
+    if request.method == 'POST': 
+        form = Movieform()
+        if form.validate_on_submit():
+            title = form.title.data
+            description = form.description.data
+            poster = form.poster.data
+            
+            filename = secure_filename(poster.filename)
+            poster.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            
+            movie = Movie(title=title, description=description, poster=filename)
+            db.session.add(movie)
+            db.session.commit()
+            
+            return jsonify(message="Movie added successfully", movie={
+                'title': title,
+                'description': description,
+                'poster': filename,
+            }), 201
+        else:
+            return jsonify(errors=form_errors(form)), 400
+    elif request.method == 'GET':
+        movies = Movie.query.all()
+        posters = get_uploaded_posters()
+        movies_list = []
+        for movie in movies:
+            if movie.poster in posters:
+                movie.poster = url_for('uploaded_poster', poster=movie.poster)
+            
+            movies_list.append({
+                'id': movie.id,
+                'title': movie.title,
+                'description': movie.description,
+                'poster': movie.poster,
+            })
+        return jsonify(movies=movies_list), 200
 
-@app.route('/api/v1/movies', methods=['GET'])
-def get_movies():
-    movies = Movie.query.all()
-    posters = get_uploaded_posters()
-    movies_list = []
-    for movie in movies:
-        if movie.poster in posters:
-            movie.poster = url_for('uploaded_poster', poster=movie.poster)
-        movies_list.append({
-            'id': movie.id,
-            'title': movie.title,
-            'poster': movie.poster,
-        })
-    print("movies: ", movies_list)
-    return jsonify(movies=movies_list), 200
 
 @app.route('/uploads/<poster>')
 def uploaded_poster(poster):

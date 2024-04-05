@@ -56,6 +56,7 @@ function saveMovie() {
 
 <template>
     <form @submit.prevent="saveMovie" id="movieForm" class="form-group mb-3 col-md-6">
+        <h1>Add Movie</h1>
         <p v-if="feedback.successMessage" class="alert alert-success">{{ feedback.successMessage }}</p>
         <ul v-if="feedback.errorMessages.length" class="alert alert-danger">
             <li v-for="(error, index) in feedback.errorMessages" :key="index">{{ error }}</li>
