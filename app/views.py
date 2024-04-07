@@ -39,12 +39,13 @@ def movies():
             movie = Movie(title=title, description=description, poster=filename)
             db.session.add(movie)
             db.session.commit()
-            
-            return jsonify(message="Movie added successfully", movie={
+
+            movie = {
                 'title': title,
                 'description': description,
                 'poster': filename,
-            }), 201
+            }
+            return jsonify(message="Movie added successfully", movie=movie), 201
         else:
             return jsonify(errors=form_errors(form)), 400
     elif request.method == 'GET':
